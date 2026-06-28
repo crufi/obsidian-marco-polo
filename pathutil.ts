@@ -1,4 +1,4 @@
-// comment: secure path expansion, valid-prefix analysis, completion, open/reveal
+// comment: secure path expansion, structural decoration rule, completion, open/reveal
 import { exec } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
@@ -13,16 +13,24 @@ const FRAGMENT_RE = /#([A-Za-z]*)\s*$/;
 export interface Spec {
 	decorate: boolean; // false => render nothing; the span looks like plain code
 	path: string; // inner string minus any "#action" fragment
-	greenEnd: number; // colour [0, greenEnd) green (existing prefix + matching partial)
-	existEnd: number; // length of the deepest prefix that actually exists (click target)
+	greenEnd: number; // color [0, greenEnd) green (the deepest existing prefix)
+	existEnd: number; // length of the deepest existing prefix (== greenEnd; click target)
 	fragment: string; // trailing "#..." text, or ""
 	fragmentState: FragmentState; // complete keyword, mid-typing, or absent
 	action: Action | null; // per-link override, set only once the fragment is valid
 }
 
-// Expand a leading ~ and $VAR / ${VAR}. This is pure string substitution against
-// the process environment — no shell is ever invoked, so user text can never be
-// executed (see SECURITY in the README). Two deliberate limits:
+// The environment used for $VAR expansion. Defaults to the process environment;
+// the plugin may replace it with a richer map sourced from the login shell (so
+// exported variables like $SHARE resolve). This is data only — see setEnvMap.
+let envMap: Record<string, string | undefined> = process.env;
+export function setEnvMap(map: Record<string, string | undefined>): void {
+	envMap = map;
+}
+
+// Expand a leading ~ and $VAR / ${VAR}. Pure string substitution against envMap —
+// no shell is ever invoked on the path, so user text can never be executed (see
+// SECURITY in the README). Two deliberate limits:
 //   * only "~" or "~/..." (the current user). "~otheruser" is left untouched, so
 //     it fails the existence check and is never expanded — we do not consult the
 //     password database to resolve another account's home.
@@ -33,8 +41,8 @@ export function expandPath(raw: string): string {
 	if (p === "~" || p.startsWith("~/")) {
 		p = os.homedir() + p.slice(1);
 	}
-	p = p.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (m, name) => process.env[name] ?? m);
-	p = p.replace(/\$([A-Za-z_][A-Za-z0-9_]*)/g, (m, name) => process.env[name] ?? m);
+	p = p.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (m, name) => envMap[name] ?? m);
+	p = p.replace(/\$([A-Za-z_][A-Za-z0-9_]*)/g, (m, name) => envMap[name] ?? m);
 	return p;
 }
 
@@ -63,41 +71,32 @@ export function looksLikePath(raw: string): boolean {
 	return p.length > 0 && /^(~|\$|\/)/.test(p);
 }
 
-// True when the final, in-progress component of `rawPath` is a prefix of some
-// real entry in its parent directory (the autocomplete sense of "still valid").
-function lastComponentMatches(rawPath: string): boolean {
-	const exp = expandPath(rawPath);
-	const slash = exp.lastIndexOf("/");
-	if (slash < 0) return false;
-	const parent = slash === 0 ? "/" : exp.slice(0, slash);
-	const base = exp.slice(slash + 1).toLowerCase();
-	if (base === "") {
-		try {
-			return fs.statSync(parent).isDirectory();
-		} catch {
-			return false;
-		}
-	}
-	let names: string[];
-	try {
-		names = fs.readdirSync(parent);
-	} catch {
-		return false;
-	}
-	return names.some((n) => n.toLowerCase().startsWith(base));
+// Decide whether a path-like span is unambiguous enough to decorate at all.
+// `existEnd` is the length of the deepest prefix that exists (so existEnd > 0
+// means the first component resolves, and existEnd === path.length means the
+// whole thing exists). The rule, in the user's words:
+//   * "/" alone               -> not decorated
+//   * "/valid-prefix"         -> decorate iff it exists (single component)
+//   * "/bad-prefix" (1 slash) -> not decorated
+//   * "/valid-prefix/"        -> decorate iff it exists (could be a regex)
+//   * "/x/y..." (text after a second separator) -> decorate iff the first
+//     component exists, so genuine paths light up but regexes and
+//     nonexistent-root strings stay plain.
+// For "~" and "$VAR" (no slash) the test is simply existence.
+function shouldDecorate(path: string, existEnd: number): boolean {
+	if (path === "/") return false;
+	const firstSep = path.indexOf("/");
+	if (firstSep < 0) return existEnd === path.length; // ~, $VAR
+	const secondSep = path.indexOf("/", firstSep + 1);
+	if (secondSep < 0) return existEnd === path.length; // one separator: must be valid
+	const afterSecond = path.slice(secondSep + 1);
+	if (afterSecond === "") return existEnd === path.length; // "/x/": conservative
+	return existEnd > 0; // content past 2nd separator: first component must exist
 }
 
-// Decide whether/how to decorate an inline-code span.
-//
-// A span is decorated only when it has a valid anchor:
-//   * with no internal "/", the whole string must itself be a valid prefix
-//     (it exists, or its last component matches something) — e.g. "/", "/fo";
-//   * with an internal "/", everything up to that first internal slash must be a
-//     real path — e.g. "/foo" in "/foo/bar".
-// Without a valid anchor the span is left as plain code (no red), so ordinary
-// text like "/nope/x" or a regex never lights up. With an anchor, the deepest
-// existing prefix is green, a still-matching final component stays green, and
-// the first committed-but-wrong component onward is red.
+// Analyze an inline-code span: whether to decorate, and where the green/red
+// boundary sits (the deepest prefix that actually exists). A still-incomplete
+// final component is NOT specially greened — green covers only what exists.
 export function analyzeSpec(inner: string): Spec {
 	let path = inner;
 	let fragment = "";
@@ -106,7 +105,7 @@ export function analyzeSpec(inner: string): Spec {
 
 	// Peel a trailing "#word" (word may be empty/partial) only when the path
 	// before "#" exists and the whole string does not — so a real path containing
-	// "#" is left intact while an action fragment being typed is recognised.
+	// "#" is left intact while an action fragment being typed is recognized.
 	const fm = inner.match(FRAGMENT_RE);
 	if (fm && fm.index !== undefined) {
 		const candidate = inner.slice(0, fm.index);
@@ -135,25 +134,8 @@ export function analyzeSpec(inner: string): Spec {
 		else break;
 	}
 
-	// extend green over a final in-progress component that still prefix-matches,
-	// but only if what remains is a single component (no deeper committed slash).
-	let greenEnd = existEnd;
-	if (existEnd < path.length) {
-		const remainder = path.slice(existEnd); // begins with "/" (or is the whole)
-		const hasDeeper = remainder.indexOf("/", 1) >= 0;
-		if (!hasDeeper && lastComponentMatches(path)) greenEnd = path.length;
-	}
-
-	// anchor test: decorate decision.
-	const firstInternalSlash = path.indexOf("/", 1);
-	let decorate: boolean;
-	if (firstInternalSlash < 0) {
-		decorate = greenEnd === path.length; // whole string is a valid prefix
-	} else {
-		decorate = existsExpanded(path.slice(0, firstInternalSlash));
-	}
-
-	return { decorate, path, greenEnd, existEnd, fragment, fragmentState, action };
+	const decorate = shouldDecorate(path, existEnd);
+	return { decorate, path, greenEnd: existEnd, existEnd, fragment, fragmentState, action };
 }
 
 // single-quote escape for safe interpolation into a /bin/sh command. Only ever

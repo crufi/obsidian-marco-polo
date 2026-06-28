@@ -20,6 +20,7 @@ import {
 	ViewUpdate,
 } from "@codemirror/view";
 import { RangeSetBuilder } from "@codemirror/state";
+import { execFile } from "child_process";
 import {
 	Action,
 	analyzeSpec,
@@ -28,8 +29,28 @@ import {
 	expandPath,
 	looksLikePath,
 	runCommandTemplate,
+	setEnvMap,
 	Spec,
 } from "./pathutil";
+
+// Source the login shell's exported environment once, as inert data. ONLY
+// `printenv` runs — the user's path text is never passed to the shell, so this
+// adds no command-execution surface (the shell does run the user's own dotfiles,
+// which is their trusted code). `-ilc` makes it interactive + login so exports
+// from .zshrc as well as .zprofile/.zshenv are captured. Exported vars only.
+function sourceShellEnv(shell: string): Promise<Record<string, string>> {
+	return new Promise((resolve, reject) => {
+		execFile(shell, ["-ilc", "printenv"], { timeout: 4000, maxBuffer: 1 << 20 }, (err, stdout) => {
+			if (err && !stdout) return reject(err);
+			const map: Record<string, string> = {};
+			for (const line of stdout.split("\n")) {
+				const m = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+				if (m) map[m[1]] = m[2];
+			}
+			resolve(map);
+		});
+	});
+}
 
 // electron's shell is the safe default for open/reveal (no shell parsing).
 // loaded lazily; typed loosely since electron types are an obsidian-runtime
@@ -53,8 +74,10 @@ interface MarcoPoloSettings {
 	revealFileCommand: string;
 	// applies to the editor only; reading mode always follows a plain click.
 	requireModifierClick: boolean;
-	// css colour for valid paths; "" falls back to the theme green.
+	// css color for valid paths; "" falls back to the theme green.
 	validColor: string;
+	// source the login shell's exported env so $VAR (e.g. $SHARE) resolves.
+	sourceShellEnv: boolean;
 }
 
 const DEFAULT_SETTINGS: MarcoPoloSettings = {
@@ -63,6 +86,7 @@ const DEFAULT_SETTINGS: MarcoPoloSettings = {
 	revealFileCommand: "",
 	requireModifierClick: true,
 	validColor: "",
+	sourceShellEnv: true,
 };
 
 // matches an inline-code span on a single line: `...`
@@ -95,14 +119,44 @@ export default class MarcoPoloPlugin extends Plugin {
 		});
 
 		this.applyValidColor();
+		void this.loadShellEnv(); // async; fills the env map shortly after load
+
+		this.addCommand({
+			id: "refresh-env",
+			name: "Refresh environment variables",
+			callback: async () => {
+				await this.loadShellEnv();
+				new Notice("Marco Polo: environment refreshed");
+			},
+		});
+
 		this.addSettingTab(new MarcoPoloSettingTab(this.app, this));
 	}
 
-	// push the chosen colour into a css variable the stylesheet reads.
+	// push the chosen color into a css variable the stylesheet reads.
 	applyValidColor() {
 		const v = this.settings.validColor;
 		if (v) document.body.style.setProperty("--mp-valid-color", v);
 		else document.body.style.removeProperty("--mp-valid-color");
+	}
+
+	// build the environment map used for $VAR expansion. when enabled (and not
+	// Windows), merge the login shell's exported vars over process.env so things
+	// like $SHARE resolve; otherwise just use process.env.
+	async loadShellEnv() {
+		if (!this.settings.sourceShellEnv || process.platform === "win32") {
+			setEnvMap(process.env);
+		} else {
+			const shell = process.env.SHELL || "/bin/zsh";
+			try {
+				const shellEnv = await sourceShellEnv(shell);
+				setEnvMap({ ...process.env, ...shellEnv });
+			} catch (e) {
+				console.error("[marco-polo] could not source shell environment:", e);
+				setEnvMap(process.env);
+			}
+		}
+		specCache.clear(); // re-validate spans against the new env
 	}
 
 	// open a directory, or reveal/open a file. `override` comes from a #open
@@ -344,6 +398,21 @@ class MarcoPoloSettingTab extends PluginSettingTab {
 				t.setValue(this.plugin.settings.requireModifierClick).onChange(async (v) => {
 					this.plugin.settings.requireModifierClick = v;
 					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName("Resolve shell variables ($SHARE, etc.)")
+			.setDesc(
+				"Source your login shell once at startup so exported variables from your shell config resolve. " +
+					"Only exported vars are seen. After editing your dotfiles, run the command " +
+					"'Marco Polo: Refresh environment variables'. Ignored on Windows."
+			)
+			.addToggle((t) =>
+				t.setValue(this.plugin.settings.sourceShellEnv).onChange(async (v) => {
+					this.plugin.settings.sourceShellEnv = v;
+					await this.plugin.saveSettings();
+					await this.plugin.loadShellEnv();
 				})
 			);
 
