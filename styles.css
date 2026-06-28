@@ -1,0 +1,39 @@
+/* comment: valid/invalid/fragment path styling + clickable affordance */
+
+/* --mp-valid-color is set from settings; falls back to the theme green */
+.mp-path-valid {
+	color: var(--mp-valid-color, var(--color-green));
+	cursor: pointer;
+	text-decoration-line: underline;
+	text-decoration-style: dotted;
+	text-underline-offset: 2px;
+}
+
+.mp-path-invalid {
+	color: var(--color-red);
+}
+
+/* trailing #open / #reveal hint, once it is a complete keyword */
+.mp-path-frag {
+	color: var(--text-muted);
+	opacity: 0.7;
+}
+
+/* fragment still being typed (empty or partial keyword) */
+.mp-path-frag-pending {
+	color: var(--color-red);
+}
+
+/* in reading mode the spans are <code>; keep them readable */
+code.mp-path {
+	font-family: var(--font-monospace);
+}
+
+.mp-sugg-dir {
+	font-weight: 600;
+}
+
+.mp-suggestion {
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-small);
+}

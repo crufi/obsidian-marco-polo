@@ -1,0 +1,20 @@
+{
+	"name": "obsidian-marco-polo",
+	"version": "0.1.0",
+	"description": "Obsidian plugin: filesystem path completion, validation, and reveal.",
+	"main": "main.js",
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
+	},
+	"keywords": [],
+	"author": "crufi",
+	"license": "MIT",
+	"devDependencies": {
+		"@types/node": "^20.11.0",
+		"builtin-modules": "^3.3.0",
+		"esbuild": "^0.28.0",
+		"obsidian": "latest",
+		"typescript": "^5.4.0"
+	}
+}

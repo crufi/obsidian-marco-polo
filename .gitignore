@@ -1,0 +1,6 @@
+# comment: build output and local cruft excluded from the repo
+node_modules/
+main.js
+*.js.map
+data.json
+.DS_Store
