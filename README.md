@@ -19,7 +19,9 @@ overridden with anything.
 - Configurable color for valid paths, with a reset to the theme green.
 - Autocomplete dropdown (Obsidian's `EditorSuggest`): up/down to browse, Enter/Tab to
   accept, Esc to dismiss. Directories sort first and get a trailing slash so completion
-  continues into them.
+  continues into them. The popup carries a "Marco Polo" footer with the key hints.
+- Command `Marco Polo: Insert local path…` opens a drill-down picker (Enter a folder to
+  go in, or choose "Insert …" to drop the current path) and inserts it as a backtick span.
 - Click to act: in the editor, Cmd/Ctrl-click (configurable); in Reading mode a plain
   click always follows the link. Directories open in the file manager; files are revealed
   or opened per settings.

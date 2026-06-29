@@ -37,3 +37,9 @@ code.mp-path {
 	font-family: var(--font-monospace);
 	font-size: var(--font-ui-small);
 }
+
+/* the "Insert <path>" row in the path picker */
+.mp-pick-insert {
+	color: var(--text-accent);
+	font-weight: 600;
+}

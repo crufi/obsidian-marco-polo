@@ -11,6 +11,7 @@ import {
 	Plugin,
 	PluginSettingTab,
 	Setting,
+	SuggestModal,
 } from "obsidian";
 import {
 	Decoration,
@@ -130,6 +131,16 @@ export default class MarcoPoloPlugin extends Plugin {
 			},
 		});
 
+		this.addCommand({
+			id: "insert-path",
+			name: "Insert local path…",
+			editorCallback: (editor) => {
+				new PathPickerModal(this.app, "~/", (path) => {
+					editor.replaceSelection("`" + path + "`");
+				}).open();
+			},
+		});
+
 		this.addSettingTab(new MarcoPoloSettingTab(this.app, this));
 	}
 
@@ -226,6 +237,13 @@ export default class MarcoPoloPlugin extends Plugin {
 class PathSuggest extends EditorSuggest<string> {
 	constructor(app: App, private plugin: MarcoPoloPlugin) {
 		super(app);
+		// footer bar: brands the popup and teaches the controls.
+		this.setInstructions([
+			{ command: "Marco Polo", purpose: "" },
+			{ command: "↑↓", purpose: "navigate" },
+			{ command: "↵ / ⇥", purpose: "use" },
+			{ command: "esc", purpose: "dismiss" },
+		]);
 	}
 
 	onTrigger(cursor: EditorPosition, editor: Editor): EditorSuggestTriggerInfo | null {
@@ -265,6 +283,68 @@ class PathSuggest extends EditorSuggest<string> {
 		editor.setCursor({ line: start.line, ch: start.ch + value.length });
 		// directories keep a trailing slash, so the next keystroke continues
 		// completing into them automatically.
+	}
+}
+
+// ---------- insert-path picker (drill-down browser) ----------
+
+interface PickItem {
+	label: string; // text shown in the row
+	path: string; // raw path this item resolves to
+	isDir: boolean;
+	insert: boolean; // true => commit this path; false => an entry to drill/insert
+}
+
+class PathPickerModal extends SuggestModal<PickItem> {
+	constructor(app: App, private initialQuery: string, private onPick: (path: string) => void) {
+		super(app);
+		this.setPlaceholder("Type a path: ~, $VAR or /  ·  Enter a folder to go in, or pick “Insert …”");
+		this.setInstructions([
+			{ command: "Marco Polo", purpose: "" },
+			{ command: "↵", purpose: "open folder / insert file" },
+			{ command: "esc", purpose: "cancel" },
+		]);
+	}
+
+	onOpen() {
+		super.onOpen();
+		this.inputEl.value = this.initialQuery;
+		this.inputEl.dispatchEvent(new Event("input"));
+	}
+
+	getSuggestions(query: string): PickItem[] {
+		const q = query.trim();
+		const items: PickItem[] = [];
+		// let the user commit the path they have typed, when it resolves.
+		if (q) {
+			const kind = classifyPath(q);
+			if (kind !== "missing") {
+				items.push({ label: `Insert  ${q}`, path: q, isDir: kind === "dir", insert: true });
+			}
+		}
+		for (const p of completePath(q)) {
+			items.push({ label: p, path: p, isDir: p.endsWith("/"), insert: false });
+		}
+		return items;
+	}
+
+	renderSuggestion(item: PickItem, el: HTMLElement) {
+		el.addClass("mp-suggestion");
+		if (item.insert) {
+			el.createSpan({ text: "↵ " + item.label, cls: "mp-pick-insert" });
+		} else {
+			const base = item.path.replace(/\/$/, "").split("/").pop() ?? item.path;
+			el.createSpan({ text: base + (item.isDir ? "/" : ""), cls: item.isDir ? "mp-sugg-dir" : "mp-sugg-file" });
+		}
+	}
+
+	onChooseSuggestion(item: PickItem) {
+		if (!item.insert && item.isDir) {
+			// drill in: reopen the picker seeded at the chosen folder.
+			new PathPickerModal(this.app, item.path, this.onPick).open();
+		} else {
+			this.onPick(item.path);
+		}
 	}
 }
 
