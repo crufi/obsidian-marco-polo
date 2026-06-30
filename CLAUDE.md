@@ -133,7 +133,13 @@ keeps an existing link pointing at the new target.
   descend (reopens seeded there); the accented "Insert …" row commits the current path as a
   backtick span at the cursor.
 - The `EditorSuggest` popup carries a "Marco Polo" footer with key hints via
-  `setInstructions`.
+  `setInstructions`. Key semantics differ deliberately: Tab accepts and keeps the
+  popup open (the inserted text — a directory keeps its trailing slash —
+  re-triggers `onTrigger`, so completion drills onward), while Enter or a click
+  accepts and dismisses. Dismiss is enforced with a one-shot `suppressReopen`
+  flag that `onTrigger` consumes, since the inserted text would otherwise reopen
+  the popup. Tab is wired on `this.scope` (Obsidian only binds Enter by default)
+  via the internal `suggestions.useSelectedItem`.
 
 ## Settings (`MarcoPoloSettings`)
 
