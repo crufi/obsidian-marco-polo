@@ -238,18 +238,39 @@ export default class MarcoPoloPlugin extends Plugin {
 // ---------- autocomplete (dropdown via EditorSuggest) ----------
 
 class PathSuggest extends EditorSuggest<string> {
+	// set when Enter/click commits a suggestion, so the reopen that the inserted
+	// text would otherwise trigger is swallowed once (Enter = accept + dismiss).
+	private suppressReopen = false;
+
 	constructor(app: App, private plugin: MarcoPoloPlugin) {
 		super(app);
 		// footer bar: brands the popup and teaches the controls.
 		this.setInstructions([
 			{ command: "Marco Polo", purpose: "" },
 			{ command: "↑↓", purpose: "navigate" },
-			{ command: "↵ / ⇥", purpose: "use" },
+			{ command: "⇥", purpose: "fill" },
+			{ command: "↵", purpose: "use" },
 			{ command: "esc", purpose: "dismiss" },
 		]);
+		// Obsidian's EditorSuggest binds Enter to accept but not Tab, so the
+		// advertised "⇥ use" did nothing. Wire Tab to select the highlighted item.
+		// `suggestions.useSelectedItem` is an internal of the base class, so reach
+		// it through a narrow cast and fall back to the default if it ever changes.
+		this.scope.register([], "Tab", (evt) => {
+			const list = (this as unknown as {
+				suggestions?: { useSelectedItem(e: KeyboardEvent): boolean };
+			}).suggestions;
+			if (!list) return true; // shape changed: let the default happen
+			list.useSelectedItem(evt);
+			return false; // swallow Tab so it doesn't insert a tab character
+		});
 	}
 
 	onTrigger(cursor: EditorPosition, editor: Editor): EditorSuggestTriggerInfo | null {
+		if (this.suppressReopen) {
+			this.suppressReopen = false; // Enter/click just committed: stay closed
+			return null;
+		}
 		const before = editor.getLine(cursor.line).slice(0, cursor.ch);
 		const openTick = before.lastIndexOf("`");
 		if (openTick === -1) return null;
@@ -279,13 +300,16 @@ class PathSuggest extends EditorSuggest<string> {
 		});
 	}
 
-	selectSuggestion(value: string) {
+	selectSuggestion(value: string, evt: MouseEvent | KeyboardEvent) {
 		if (!this.context) return;
 		const { editor, start, end } = this.context;
 		editor.replaceRange(value, start, end);
 		editor.setCursor({ line: start.line, ch: start.ch + value.length });
-		// directories keep a trailing slash, so the next keystroke continues
-		// completing into them automatically.
+		// Tab = accept and keep editing: the inserted text (a directory keeps its
+		// trailing slash) re-triggers the popup, so completion drills onward.
+		// Enter or a click = accept and dismiss: suppress that one reopen.
+		const keepEditing = evt instanceof KeyboardEvent && evt.key === "Tab";
+		this.suppressReopen = !keepEditing;
 	}
 }
 
