@@ -16,6 +16,11 @@ release; remaining work is polish and the publishing path (see Next steps).
 - `npm install`
 - `npm run build` — `tsc -noEmit -skipLibCheck` then esbuild production bundle to `main.js`
 - `npm run dev` — esbuild watch
+- `npm test` — unit tests for `pathutil.ts` via Node's built-in runner (`node --test`,
+  Node strips the TS types; needs Node 23+). No test framework dependency.
+- If `npm run build` fails with `spawn ENOEXEC`, `node_modules` was installed on a different
+  OS/arch (esbuild ships a native binary). Fix: `rm -rf node_modules package-lock.json &&
+  npm install` on this machine.
 - Install into a vault: `ln -s "$PWD" ~/<vault>/.obsidian/plugins/marco-polo`, then enable
   under Settings -> Community plugins and reload. The dev vault in use is `~/codex`.
 
@@ -26,6 +31,8 @@ release; remaining work is polish and the publishing path (see Next steps).
   sourcing, commands, and the settings tab.
 - `pathutil.ts` — secure path expansion, the decoration analysis (`analyzeSpec`), the
   decoration rule (`shouldDecorate`), directory completion, and the custom-command runner.
+- `test/pathutil.test.ts` — unit tests over the pure logic: the `expandPath` security
+  property, the decoration rule against a real temp tree, completion, and the async cache.
 - `styles.css` — green/red/fragment span styles, suggestion and picker styles.
 - `esbuild.config.mjs` — bundles `main.ts`; externals are obsidian, electron, codemirror,
   and lezer packages.
@@ -51,8 +58,25 @@ at all, so ordinary inline code and regexes do not light up:
   because their root almost always exists, while a regex like `/\d+/g` or a nonexistent
   root like `/bad/x` stays plain.
 - `~` and `$VAR` with no slash — decorate only if they resolve.
+- ill-formed specs are rejected by `isMalformedPath` (shared by validation and
+  completion): an empty path component `//` — whether typed literally
+  (`//Users/…`) or produced by an absolute `$VAR` after the first segment
+  (`/$SHARE`, `/a/$SHARE`) — stays plain even though the OS would collapse and
+  `stat` it. A genuine leading-`//` UNC root is allowed only on Windows. A `$VAR`
+  with a *relative* value mid-path (e.g. `~/p/$PROJECT`) is still fine, and so is
+  a `$VAR` whose value happens to end in a slash.
 
-This rule was verified against a real `/tmp` tree; if it changes, re-run that kind of check.
+This rule is now pinned by `test/pathutil.test.ts` (the executable form of the old "verified
+against a real `/tmp` tree" check); run `npm test` after changing it.
+
+Existence checks are non-blocking on the editor render path. `analyzeSpec(inner, sync=false)`
+reads from an in-memory cache (`cachedKind`); a miss returns "not yet known" and schedules a
+background `fs.stat`, and `onStatResolved` listeners repaint when an answer changes — so a
+slow/network mount (a likely `$SHARE` home) never janks typing. Reading mode passes
+`sync=true` (a one-shot render can afford a blocking `fs.statSync`), and `classifyPath` (used
+on an explicit click) stays synchronous on purpose. Stale entries (>5s) refresh in the
+background without flicker. The editor CM6 plugin repaints via the `mpRerender` `StateEffect`
+and no longer rebuilds on cursor moves (`selectionSet` dropped).
 
 ## Path expansion and security
 
@@ -82,6 +106,13 @@ exported variables, merges them over `process.env`, and hands the map to `setEnv
 visible (`export SHARE=...`, not a bare `SHARE=...`). The command `Marco Polo: Refresh
 environment variables` re-sources after dotfile edits; `specCache` is cleared on refresh.
 
+Portability is the point of `$VAR` links: the path text is the source of truth and is never
+rewritten with an expansion. `completePath` keeps the literal prefix (`$SHARE/`, `~/`) in its
+suggestions — it expands only to read the directory — so accepting a completion preserves the
+variable. Validation/coloring expands eagerly (green = currently resolves) but a click
+re-expands on demand (`activatePath` -> `classifyPath`/`expandPath`), so changing `$SHARE`
+keeps an existing link pointing at the new target.
+
 ## Other behaviors
 
 - Action fragment: append `#open` or `#reveal` inside the backticks to override the file
@@ -93,7 +124,11 @@ environment variables` re-sources after dotfile edits; `specCache` is cleared on
   per-link override.
 - Cross-platform: defaults use Electron `shell.openPath` / `showItemInFolder`. Custom
   open/reveal commands are user-provided with a `{path}` token (examples for macOS, Linux,
-  Windows in settings and README). Nothing is macOS-specific.
+  Windows in settings and README). Nothing is macOS-specific. Path *detection* also accepts
+  Windows drive (`C:\`/`C:/`) and UNC (`\\server`) shapes; `\` is normalized to `/` only to
+  locate separators (length-preserving, so display indices are unaffected). Windows support
+  is best-effort and untested on a real Windows box; `$VAR` (not `%VAR%`) is the only
+  variable form expanded.
 - `insert-path` command: a drill-down `SuggestModal` seeded at `~/`. Enter a folder to
   descend (reopens seeded there); the accented "Insert …" row commits the current path as a
   backtick span at the cursor.
@@ -103,9 +138,9 @@ environment variables` re-sources after dotfile edits; `specCache` is cleared on
 ## Settings (`MarcoPoloSettings`)
 
 `fileClickAction` (reveal | open, default reveal), `openDirCommand` / `revealFileCommand`
-(blank = Electron default), `requireModifierClick` (default true), `validColor` (CSS color,
-"" = theme green, applied via the `--mp-valid-color` variable), `sourceShellEnv` (default
-true).
+(blank = Electron default), `requireModifierClick` (default true), `validColor` (hex color from the settings
+color-picker, "" = theme green, applied via the `--mp-valid-color` variable; the variable
+accepts any CSS color but the UI only yields hex), `sourceShellEnv` (default true).
 
 ## Known issues and gotchas
 
@@ -133,11 +168,14 @@ true).
 
 ## Repo / git note
 
-Git history has one commit (`5dd8d61`, the v0.1.0 baseline). Later edits — the structural
-decoration rule, the anchor variant, shell-env sourcing, the footer label, and the
-`insert-path` command — are saved in the working tree but were not committed, because the
-prior cowork sandbox mount blocked the index-replace that a second commit needs. On a normal
-machine `git add -A && git commit` captures everything.
+Git history now has four commits; the structural decoration rule, anchor variant, shell-env
+sourcing, footer label, and `insert-path` command are committed (`1373632`, `fc0e634`) — the
+old "saved in the working tree but not committed" note is obsolete. `main.js`, `node_modules/`,
+and `data.json` remain gitignored, so a community-plugin release attaches the built `main.js`,
+`manifest.json`, and `styles.css` to a GitHub release rather than committing them.
+
+Note: `node_modules` had been installed under Linux (cowork sandbox), so esbuild's native
+binary failed with `spawn ENOEXEC` on this Mac until a native `npm install` (see Build and dev).
 
 ## Conventions
 

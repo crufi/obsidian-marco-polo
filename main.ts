@@ -20,15 +20,17 @@ import {
 	ViewPlugin,
 	ViewUpdate,
 } from "@codemirror/view";
-import { RangeSetBuilder } from "@codemirror/state";
+import { RangeSetBuilder, StateEffect } from "@codemirror/state";
 import { execFile } from "child_process";
 import {
 	Action,
 	analyzeSpec,
 	classifyPath,
+	clearStatCache,
 	completePath,
 	expandPath,
 	looksLikePath,
+	onStatResolved,
 	runCommandTemplate,
 	setEnvMap,
 	Spec,
@@ -168,6 +170,7 @@ export default class MarcoPoloPlugin extends Plugin {
 			}
 		}
 		specCache.clear(); // re-validate spans against the new env
+		clearStatCache(); // expansions changed; drop cached existence answers
 	}
 
 	// open a directory, or reveal/open a file. `override` comes from a #open
@@ -203,7 +206,7 @@ export default class MarcoPoloPlugin extends Plugin {
 		el.querySelectorAll("code").forEach((code) => {
 			const inner = code.textContent ?? "";
 			if (!looksLikePath(inner)) return;
-			const spec = analyzeSpec(inner);
+			const spec = analyzeSpec(inner, true); // sync: reading mode renders once
 			if (!spec.decorate) return; // no valid anchor -> leave as plain code
 			code.empty();
 			code.classList.add("mp-path");
@@ -366,15 +369,32 @@ function cachedSpec(inner: string): Spec {
 	return s;
 }
 
+// dispatched (as a no-op transaction) when a background stat resolves, to ask
+// the view to repaint without an edit. Decorations don't depend on the
+// selection, so cursor moves no longer trigger a rebuild.
+const mpRerender = StateEffect.define<null>();
+
 function makeValidationPlugin() {
 	return ViewPlugin.fromClass(
 		class {
 			decorations: DecorationSet;
+			unsub: () => void;
 			constructor(view: EditorView) {
 				this.decorations = this.build(view);
+				// a background existence check finished: drop stale specs and ask
+				// this view to rebuild. Fires on a fresh tick (the fs callback), so
+				// dispatching here is safe.
+				this.unsub = onStatResolved(() => {
+					specCache.clear();
+					view.dispatch({ effects: mpRerender.of(null) });
+				});
+			}
+			destroy() {
+				this.unsub();
 			}
 			update(u: ViewUpdate) {
-				if (u.docChanged || u.viewportChanged || u.selectionSet) {
+				const rerender = u.transactions.some((t) => t.effects.some((e) => e.is(mpRerender)));
+				if (u.docChanged || u.viewportChanged || rerender) {
 					this.decorations = this.build(u.view);
 				}
 			}

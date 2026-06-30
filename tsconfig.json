@@ -13,5 +13,6 @@
 		"strictNullChecks": true,
 		"lib": ["DOM", "ES2020"]
 	},
-	"include": ["**/*.ts"]
+	"include": ["**/*.ts"],
+	"exclude": ["test"]
 }
