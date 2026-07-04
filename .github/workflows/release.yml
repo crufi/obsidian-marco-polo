@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "*"            # Obsidian: tag == manifest version, no "v" prefix
+
+permissions:
+  contents: write      # create the release + upload assets
+  id-token: write      # OIDC token used to sign the attestation (Sigstore)
+  attestations: write  # write the attestation to the repo's store
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"   # 23+ required so `npm test` can strip TS types
+          cache: "npm"
+
+      - run: npm ci
+      - run: npm run build     # produces main.js (tsc type-check + esbuild)
+      - run: npm test          # optional; needs Node 23+
+
+      # The attestation step — this is the actual "artifact attestation" feature.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
+
+      # Create the release and attach the plugin's three installable files.
+      # Uses the built-in gh CLI (no third-party action) — fits the repo's
+      # security-conscious posture.
+      - name: Create release with plugin assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            main.js manifest.json styles.css \
+            --title "$GITHUB_REF_NAME" --generate-notes
