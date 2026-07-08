@@ -103,7 +103,7 @@ test("completePath keeps the literal $VAR / ~ prefix instead of expanding it", (
 	setEnvMap(process.env);
 });
 
-// ---- embedded-absolute-var guard (the "/$SHARE" nonsense) ----
+// ---- embedded-absolute-var guard ----
 
 test("a $VAR that expands to an absolute path is not decorated mid-path", () => {
 	setEnvMap({ SHARE: tmp }); // SHARE is absolute and exists
