@@ -185,7 +185,7 @@ binary failed with `spawn ENOEXEC` on this Mac until a native `npm install` (see
 
 ## Conventions
 
-US spelling only (color, not colour). In docs, avoid second-person "you" where a neutral
+US spelling. In docs, avoid second-person "you" where a neutral
 phrasing reads as well. Keep caps and emphasis minimal. Source files start with a terse
-`# comment:` (or `//` / `/* */`) line describing the file's purpose. Filenames use hyphens,
+line describing the file's purpose. Filenames use hyphens,
 not underscores.
