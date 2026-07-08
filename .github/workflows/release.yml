@@ -16,6 +16,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Fail fast if the pushed tag doesn't match manifest.json's version, so a
+      # mistyped tag can never publish a mismatched release. (jq is preinstalled
+      # on ubuntu-latest.)
+      - name: Verify tag matches manifest version
+        run: |
+          manifest_version="$(jq -r .version manifest.json)"
+          if [ "$GITHUB_REF_NAME" != "$manifest_version" ]; then
+            echo "::error::Tag '$GITHUB_REF_NAME' != manifest.json version '$manifest_version' — bump the version files or retag."
+            exit 1
+          fi
+          echo "Tag matches manifest version ($manifest_version)."
+
       - uses: actions/setup-node@v4
         with:
           node-version: "24"   # 23+ required so `npm test` can strip TS types
