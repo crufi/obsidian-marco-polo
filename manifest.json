@@ -4,7 +4,7 @@
 	"version": "0.1.0",
 	"minAppVersion": "1.4.0",
 	"description": "Type a filesystem path in backticks: live validation, autocomplete, and click to reveal or open it in your file manager.",
-	"author": "crufi",
+	"author": "Steve Crutchfield",
 	"authorUrl": "https://github.com/crufi/obsidian-marco-polo",
 	"isDesktopOnly": true
 }
