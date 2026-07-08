@@ -1,4 +1,5 @@
 # Marco Polo
+*From Venice to Cathay to `~/notes`*
 
 <!-- obsidian plugin - it finds a path -->
 
