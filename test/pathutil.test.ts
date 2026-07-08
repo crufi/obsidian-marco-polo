@@ -1,4 +1,4 @@
-// comment: unit tests for the pure path logic (no Obsidian needed).
+// unit tests for the pure path logic (no Obsidian needed).
 // Run with `npm test` (Node's built-in runner; Node strips the TS types).
 import { test } from "node:test";
 import assert from "node:assert/strict";

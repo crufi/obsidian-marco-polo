@@ -1,6 +1,6 @@
 # Marco Polo
 
-<!-- comment: obsidian plugin - it finds a path -->
+<!-- obsidian plugin - it finds a path -->
 
 Type a filesystem path inside backticks. Marco Polo validates it live, autocompletes
 as it is typed, and turns valid paths into clickable links that reveal or open them in
@@ -103,7 +103,7 @@ startup — `$SHELL -ilc printenv` — and merges its exported variables over `p
 ## Install for local development
 
 ```sh
-# comment: build, then symlink into the vault's plugin folder
+# build, then symlink into the vault's plugin folder
 npm install
 npm run build            # one-off production build -> main.js
 # or: npm run dev        # watch mode

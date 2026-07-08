@@ -1,4 +1,4 @@
-<!-- comment: project context and handoff notes for claude code -->
+<!-- project context and handoff notes for claude code -->
 
 # Marco Polo — project context
 

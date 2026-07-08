@@ -1,4 +1,4 @@
-// comment: marco-polo - filesystem path autocomplete/validate/reveal in obsidian
+// marco-polo - filesystem path autocomplete/validate/reveal in obsidian
 import {
 	App,
 	Editor,
@@ -527,9 +527,11 @@ class MarcoPoloSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Resolve shell variables ($SHARE, etc.)")
 			.setDesc(
-				"Source your login shell once at startup so exported variables from your shell config resolve. " +
-					"Only exported vars are seen. After editing your dotfiles, run the command " +
-					"'Marco Polo: Refresh environment variables'. Ignored on Windows."
+				"Runs your login shell once at startup so variables exported in your shell config (like $SHARE) resolve. " +
+					"Your path text is never sent to the shell — only the exported KEY=VALUE list is read. " +
+					"After editing your dotfiles, run 'Marco Polo: Refresh environment variables' or restart Obsidian. " +
+					"When off, Marco Polo never launches a shell: variables already in Obsidian's environment (like $HOME) " +
+					"still expand, but ones defined only in your shell config won't. Ignored on Windows."
 			)
 			.addToggle((t) =>
 				t.setValue(this.plugin.settings.sourceShellEnv).onChange(async (v) => {

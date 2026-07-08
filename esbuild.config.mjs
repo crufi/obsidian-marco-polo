@@ -1,4 +1,4 @@
-// comment: bundles main.ts -> main.js for the obsidian plugin
+// bundles main.ts -> main.js for the obsidian plugin
 import esbuild from "esbuild";
 import process from "process";
 import builtins from "builtin-modules";
