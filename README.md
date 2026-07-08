@@ -1,14 +1,14 @@
 # Marco Polo
 ⛵ *From Venice to Cathay to `~/notes`*
 
-<!-- obsidian plugin - it finds a path -->
-
 Type a filesystem path inside backticks. Marco Polo validates it live, autocompletes
 as it is typed, and turns valid paths into clickable links that reveal or open them in
 the file manager.
 
-Desktop only — it uses Node's `fs`/`os` and Electron's `shell`, which do not exist on
-mobile. The defaults work on macOS, Windows, and Linux, and the open/reveal commands can be
+<img src="docs/marco-polo.png" width="600" alt="Marco Polo in action">
+
+Desktop only (uses Node's `fs`/`os` and Electron's `shell`, which do not exist on
+mobile). The defaults work on macOS, Windows, and Linux, and the open/reveal commands can be
 overridden with anything.
 
 ## Autocomplete local paths, show as clickable links
