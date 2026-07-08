@@ -252,8 +252,7 @@ class PathSuggest extends EditorSuggest<string> {
 			{ command: "↵", purpose: "use" },
 			{ command: "esc", purpose: "dismiss" },
 		]);
-		// Obsidian's EditorSuggest binds Enter to accept but not Tab, so the
-		// advertised "⇥ use" did nothing. Wire Tab to select the highlighted item.
+		// Obsidian's EditorSuggest binds Enter to accept but not Tab, so wire Tab to select the highlighted item.
 		// `suggestions.useSelectedItem` is an internal of the base class, so reach
 		// it through a narrow cast and fall back to the default if it ever changes.
 		this.scope.register([], "Tab", (evt) => {
