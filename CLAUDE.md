@@ -4,7 +4,7 @@
 
 An Obsidian plugin. Type a filesystem path inside backticks (`` `~/notes` ``) and it
 validates the path live, autocompletes it, colors it, and makes it clickable to reveal or
-open in the file manager. Repo `obsidian-marco-polo`, plugin id `obsidian-marco-polo`, product name
+open in the file manager. Repo `obsidian-marco-polo`, plugin id `marco-polo`, product name
 "Marco Polo", author `crufi`. Desktop only (`isDesktopOnly: true`) because it uses Node
 `fs`/`os` and Electron `shell`.
 
@@ -21,7 +21,7 @@ release; remaining work is polish and the publishing path (see Next steps).
 - If `npm run build` fails with `spawn ENOEXEC`, `node_modules` was installed on a different
   OS/arch (esbuild ships a native binary). Fix: `rm -rf node_modules package-lock.json &&
   npm install` on this machine.
-- Install into a vault: `ln -s "$PWD" ~/<vault>/.obsidian/plugins/obsidian-marco-polo`, then enable
+- Install into a vault: `ln -s "$PWD" ~/<vault>/.obsidian/plugins/marco-polo`, then enable
   under Settings -> Community plugins and reload. The dev vault in use is `~/codex`.
 
 ## File layout
@@ -151,7 +151,7 @@ accepts any CSS color but the UI only yields hex), `sourceShellEnv` (default tru
 ## Known issues and gotchas
 
 - Dangling symlink crash: if the plugin symlink points at a path that disappears, Obsidian
-  fails to start with `ENOENT ... stat .../plugins/obsidian-marco-polo`. This already happened once
+  fails to start with `ENOENT ... stat .../plugins/marco-polo`. This already happened once
   when the link pointed at a temporary scratch folder. Point the link at the persistent repo
   (`~/src/obsidian-marco-polo`) or copy the built files in.
 - Click target for a mid-typed root-level partial (e.g. `/t`) is empty, because the root `/`

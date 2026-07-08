@@ -109,7 +109,7 @@ npm run build            # one-off production build -> main.js
 # or: npm run dev        # watch mode
 
 # link the folder into a vault (adjust the vault path)
-ln -s "$PWD" "/path/to/Vault/.obsidian/plugins/obsidian-marco-polo"
+ln -s "$PWD" "/path/to/Vault/.obsidian/plugins/marco-polo"
 ```
 
 Then enable Marco Polo under Settings -> Community plugins. Reload Obsidian (or use the

@@ -1,10 +1,10 @@
 {
-	"id": "obsidian-marco-polo",
+	"id": "marco-polo",
 	"name": "Marco Polo",
 	"version": "0.1.0",
 	"minAppVersion": "1.4.0",
 	"description": "Type a filesystem path in backticks: live validation, autocomplete, and click to reveal or open it in your file manager.",
 	"author": "Steve Crutchfield",
-	"authorUrl": "https://github.com/crufi/obsidian-marco-polo",
+	"authorUrl": "https://github.com/crufi",
 	"isDesktopOnly": true
 }
