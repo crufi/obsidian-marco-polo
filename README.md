@@ -5,7 +5,7 @@ Type a filesystem path inside backticks. Marco Polo validates it live, autocompl
 as it is typed, and turns valid paths into clickable links that reveal or open them in
 the file manager.
 
-<img src="docs/marco-polo.png" width="600" alt="Marco Polo in action">
+<img src="docs/demo.gif" width="600" alt="Marco Polo in action">
 
 Desktop only (uses Node's `fs`/`os` and Electron's `shell`, which do not exist on
 mobile). The defaults work on macOS, Windows, and Linux, and the open/reveal commands can be
