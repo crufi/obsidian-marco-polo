@@ -1,7 +1,7 @@
 {
 	"id": "marco-polo",
 	"name": "Marco Polo",
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"minAppVersion": "1.4.0",
 	"description": "Type a filesystem path in backticks: live validation, autocomplete, and click to reveal or open it in your file manager. Read-only — it only checks whether paths exist and never reads or modifies your files.",
 	"author": "Steve Crutchfield",

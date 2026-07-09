@@ -4,8 +4,10 @@
 .mp-path-valid {
 	color: var(--mp-valid-color, var(--color-green));
 	cursor: pointer;
-	text-decoration: underline dotted;
-	text-underline-offset: 2px;
+	/* dotted underline via border (not text-decoration, which the Obsidian CSS
+	   lint flags as only partially supported); border-color inherits the text
+	   color, so it matches the valid-path green. */
+	border-bottom: 1px dotted;
 }
 
 .mp-path-invalid {
