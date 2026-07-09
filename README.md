@@ -13,6 +13,34 @@ overridden with anything.
 
 ## Autocomplete local paths, show as clickable links
 
+Easier to use than to describe. Just start typing:
+
+- \`/path/to/something\`
+
+and you'll get a clickable link with autocomplete as you type.
+
+These also work:
+
+- \`~/something_in_your_home_dir\`
+- \`$SOME_SHELL_VARIABLE/file.txt\` (if optional shell variable expansion is on)
+- \`/path/to/some/directory/\`
+
+Configurable color for valid paths; bad paths show up in red until corrected.
+
+Autocomplete dropdown: up/down to browse, Enter/Tab to accept, Esc to dismiss. Directories sort first.
+
+Command "Marco Polo: Insert local path…" opens a drill-down picker and inserts it as a backtick span.
+
+Per-link override: append #open or #reveal inside the backticks to override the default file action:
+
+- \`/click/to/open/this/file#open\`
+- \`/click/to/show/containing/directory/of/file.txt#reveal\`
+- \`/click/for/default/behavior/for/this/file\`
+
+Needs file system access to validate paths and identify subfolders, but Marco Polo will never read your files or write anything.
+
+## Features
+
 - Resolves `~`, `$VAR`, and `${VAR}`. Exported shell variables (like `$SHARE`) resolve
   when shell-env sourcing is on — see the environment section below.
 - Validates while typing, with a deliberately conservative coloring rule (next section).
