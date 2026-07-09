@@ -44,7 +44,7 @@ import {
 function sourceShellEnv(shell: string): Promise<Record<string, string>> {
 	return new Promise((resolve, reject) => {
 		execFile(shell, ["-ilc", "printenv"], { timeout: 4000, maxBuffer: 1 << 20 }, (err, stdout) => {
-			if (err && !stdout) return reject(err);
+			if (err && !stdout) return reject(err instanceof Error ? err : new Error(String(err)));
 			const map: Record<string, string> = {};
 			for (const line of stdout.split("\n")) {
 				const m = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
@@ -107,7 +107,7 @@ export default class MarcoPoloPlugin extends Plugin {
 
 		this.registerDomEvent(document, "mousedown", (evt) => {
 			const target = evt.target as HTMLElement;
-			const span = target.closest?.(".mp-path-valid") as HTMLElement | null;
+			const span = target.closest?.(".mp-path-valid");
 			if (!span) return;
 			// reading/preview always follows a plain click; the modifier rule
 			// only guards the live editor, where text editing must stay intact.
@@ -189,7 +189,7 @@ export default class MarcoPoloPlugin extends Plugin {
 			if (kind === "dir" && this.settings.openDirCommand) {
 				runCommandTemplate(this.settings.openDirCommand, expanded);
 			} else if (shell) {
-				shell.openPath(expanded);
+				void shell.openPath(expanded);
 			}
 		} else {
 			// reveal

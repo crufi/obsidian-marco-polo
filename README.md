@@ -47,6 +47,14 @@ shown green and any remainder red:
   regex like `/\d+/g` or a nonexistent root like `/bad/x` stays plain.
 - `~` and `$VAR` with no slash are decorated only if they resolve.
 
+## What Marco Polo accesses
+
+Marco Polo only touches your filesystem, **on a read-only basis**, to (1) check whether a path exists and (2) to list subfolder names for autocomplete. It **never reads the contents of your files, and never creates, changes, or deletes anything**. It opens or reveals a path only when you select a link, handing the path to your system file manager (the same as double-clicking it in Finder/Explorer).
+
+Shell access is used **only if you opt in**, to (1) read exported shell variables for expansion in a path (via printenv, so variables like $SHARE resolve) and (2) to run custom open/reveal commands if you chose to set them in settings.
+
+Marco Polo will never read or access any of your files itself.
+
 ## Security
 
 The expansion of `~` and `$VAR` is done by pure string substitution in JavaScript against

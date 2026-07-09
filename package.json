@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-marco-polo",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Obsidian plugin: filesystem path completion, validation, and reveal.",
 	"main": "main.js",
 	"scripts": {
@@ -17,5 +17,9 @@
 		"esbuild": "^0.28.0",
 		"obsidian": "latest",
 		"typescript": "^5.4.0"
+	},
+	"dependencies": {
+		"@codemirror/state": "^6.7.1",
+		"@codemirror/view": "^6.43.6"
 	}
 }

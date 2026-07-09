@@ -208,7 +208,7 @@ export function analyzeSpec(inner: string, sync = false): Spec {
 			fragment = inner.slice(fm.index);
 			const word = fm[1].toLowerCase();
 			if (word === "open" || word === "reveal") {
-				action = word as Action;
+				action = word;
 				fragmentState = "valid";
 			} else {
 				fragmentState = "pending"; // empty or partial keyword -> shown red
