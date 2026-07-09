@@ -1,7 +1,7 @@
 // bundles main.ts -> main.js for the obsidian plugin
 import esbuild from "esbuild";
 import process from "process";
-import builtins from "builtin-modules";
+import { builtinModules as builtins } from "module";
 
 const prod = process.argv[2] === "production";
 

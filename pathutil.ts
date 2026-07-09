@@ -102,8 +102,8 @@ export function expandPath(raw: string): string {
 	if (p === "~" || p.startsWith("~/")) {
 		p = os.homedir() + p.slice(1);
 	}
-	p = p.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (m, name) => envMap[name] ?? m);
-	p = p.replace(/\$([A-Za-z_][A-Za-z0-9_]*)/g, (m, name) => envMap[name] ?? m);
+	p = p.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (_m: string, name: string) => envMap[name] ?? _m);
+	p = p.replace(/\$([A-Za-z_][A-Za-z0-9_]*)/g, (_m: string, name: string) => envMap[name] ?? _m);
 	return p;
 }
 
