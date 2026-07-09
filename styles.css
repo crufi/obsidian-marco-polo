@@ -4,8 +4,7 @@
 .mp-path-valid {
 	color: var(--mp-valid-color, var(--color-green));
 	cursor: pointer;
-	text-decoration-line: underline;
-	text-decoration-style: dotted;
+	text-decoration: underline dotted;
 	text-underline-offset: 2px;
 }
 
