@@ -22,6 +22,7 @@ import {
 } from "@codemirror/view";
 import { RangeSetBuilder, StateEffect } from "@codemirror/state";
 import { execFile } from "child_process";
+import { shell as electronShellApi } from "electron";
 import {
 	Action,
 	analyzeSpec,
@@ -56,18 +57,14 @@ function sourceShellEnv(shell: string): Promise<Record<string, string>> {
 }
 
 // electron's shell is the safe default for open/reveal (no shell parsing).
-// loaded lazily; typed loosely since electron types are an obsidian-runtime
-// external and are not present at build time.
+// electron is an obsidian-runtime external (not bundled) and ships no types here,
+// so declare the small slice used and import it by name — typed, and no require().
 interface ElectronShell {
 	openPath(path: string): Promise<string>;
 	showItemInFolder(path: string): void;
 }
 function electronShell(): ElectronShell | null {
-	try {
-		return (require("electron") as { shell: ElectronShell }).shell;
-	} catch {
-		return null;
-	}
+	return electronShellApi;
 }
 
 interface MarcoPoloSettings {
@@ -105,7 +102,7 @@ export default class MarcoPoloPlugin extends Plugin {
 		this.registerEditorExtension(makeValidationPlugin());
 		this.registerMarkdownPostProcessor((el, ctx) => this.decorateReadingMode(el, ctx));
 
-		this.registerDomEvent(document, "mousedown", (evt) => {
+		this.registerDomEvent(activeDocument, "mousedown", (evt) => {
 			const target = evt.target as HTMLElement;
 			const span = target.closest?.(".mp-path-valid");
 			if (!span) return;
@@ -149,8 +146,8 @@ export default class MarcoPoloPlugin extends Plugin {
 	// push the chosen color into a css variable the stylesheet reads.
 	applyValidColor() {
 		const v = this.settings.validColor;
-		if (v) document.body.style.setProperty("--mp-valid-color", v);
-		else document.body.style.removeProperty("--mp-valid-color");
+		if (v) activeDocument.body.style.setProperty("--mp-valid-color", v);
+		else activeDocument.body.style.removeProperty("--mp-valid-color");
 	}
 
 	// build the environment map used for $VAR expansion. when enabled (and not
@@ -333,7 +330,7 @@ class PathPickerModal extends SuggestModal<PickItem> {
 	}
 
 	onOpen() {
-		super.onOpen();
+		void super.onOpen();
 		this.inputEl.value = this.initialQuery;
 		this.inputEl.dispatchEvent(new Event("input"));
 	}
